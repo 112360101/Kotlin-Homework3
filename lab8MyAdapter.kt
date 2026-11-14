@@ -8,43 +8,38 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
 class MyAdapter(
-    private val data: ArrayList<Contact>
+    private val data: MutableList<Contact>
 ) : RecyclerView.Adapter<MyAdapter.ViewHolder>() {
-    // 實作 RecyclerView.ViewHolder 來儲存View
-    class ViewHolder(v: View) : RecyclerView.ViewHolder(v) {
-        // 儲存 View 元件
-        private val tvName: TextView = v.findViewById(R.id.tvName)
-        private val tvPhone: TextView = v.findViewById(R.id.tvPhone)
+
+    // 使用 inner class 讓 ViewHolder 可直接存取 data，並將點擊監聽器放在 init 中只建立一次
+    inner class ViewHolder(v: View) : RecyclerView.ViewHolder(v) {
+        val tvName: TextView = v.findViewById(R.id.tvName)
+        val tvPhone: TextView = v.findViewById(R.id.tvPhone)
         private val imgDelete: ImageView = v.findViewById(R.id.imgDelete)
 
-        // 連結資料與 View
-        fun bind(item: Contact, clickListener: (Contact) -> Unit) {
-            tvName.text = item.name
-            tvPhone.text = item.phone
-            // 設定監聽器
+        init {
             imgDelete.setOnClickListener {
-                // 呼叫 clickListener 回傳刪除的資料
-                clickListener.invoke(item)
+                // 使用 bindingAdapterPosition 取代已棄用的 adapterPosition，並防呆快速連點
+                val pos = bindingAdapterPosition
+                if (pos != RecyclerView.NO_POSITION) {
+                    data.removeAt(pos)
+                    notifyItemRemoved(pos) // 僅針對被刪除的項目執行局部刷新與動畫
+                }
             }
         }
     }
 
-    // 建立ViewHolder與Layout並連結彼此
-    override fun onCreateViewHolder(viewGroup: ViewGroup, position: Int): ViewHolder {
-        val v = LayoutInflater.from(viewGroup.context)
-            .inflate(R.layout.adapter_row, viewGroup, false)
+    override fun getItemCount(): Int = data.size
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        val v = LayoutInflater.from(parent.context)
+            .inflate(R.layout.adapter_row, parent, false)
         return ViewHolder(v)
     }
 
-    // 回傳資料數量
-    override fun getItemCount() = data.size
-
-    // 將資料指派給 ViewHolder 顯示
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(data[position]) { item ->
-            // 使用 remove() 刪除指定的資料
-            data.remove(item)
-            notifyDataSetChanged()
-        }
+        val contact = data[position]
+        holder.tvName.text = contact.name
+        holder.tvPhone.text = contact.phone
     }
 }
